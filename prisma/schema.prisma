@@ -1,0 +1,67 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum TxStatus { DETECTED PENDING CONFIRMING CONFIRMED SWAP_QUEUED SWAPPING SWAPPED WITHDRAW_QUEUED WITHDRAWING WITHDRAWN FAILED MANUAL_REVIEW }
+
+model LtcTransaction {
+  id String @id @default(cuid())
+  txHash String @unique
+  trackId String?
+  address String
+  amountLtc Decimal @db.Decimal(30, 12)
+  confirmations Int @default(0)
+  status TxStatus @default(DETECTED)
+  provider String @default("oxapay")
+  raw Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  swapRecords SwapRecord[]
+  withdrawalRecords WithdrawalRecord[]
+}
+
+model SwapRecord {
+  id String @id @default(cuid())
+  txId String
+  tx LtcTransaction @relation(fields: [txId], references: [id])
+  provider String
+  fromCurrency String
+  toCurrency String
+  fromAmount Decimal @db.Decimal(30, 12)
+  toAmount Decimal @db.Decimal(30, 12)
+  fee Decimal? @db.Decimal(30, 12)
+  providerOrderId String?
+  raw Json?
+  createdAt DateTime @default(now())
+}
+
+model WithdrawalRecord {
+  id String @id @default(cuid())
+  txId String
+  tx LtcTransaction @relation(fields: [txId], references: [id])
+  provider String
+  currency String
+  network String
+  amount Decimal @db.Decimal(30, 12)
+  fee Decimal? @db.Decimal(30, 12)
+  destination String
+  providerWithdrawalId String?
+  txHash String?
+  status String
+  raw Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  actor String
+  action String
+  details Json?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key String @id
+  value String
+  updatedAt DateTime @updatedAt
+}
